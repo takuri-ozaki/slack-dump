@@ -28,3 +28,4 @@ slackdum*
 
 .vscode/
 dist/
+.idea/
