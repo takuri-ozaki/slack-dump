@@ -294,6 +294,7 @@ func dumpGroups(api *slack.Client, dir string, rooms []string) []slack.Group {
 func dumpChannel(api *slack.Client, dir, id, name, channelType string) {
 	var messages []slack.Message
 	var channelPath string
+	time.Sleep(2 * time.Second)
 	if channelType == "group" {
 		channelPath = path.Join("private_channel", name)
 		messages = fetchGroupHistory(api, id)
