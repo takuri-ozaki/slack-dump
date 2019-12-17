@@ -44,6 +44,12 @@ func main() {
 			Usage:  "Output directory path. Default: current directory path",
 			EnvVar: "",
 		},
+		cli.StringFlag{
+			Name: "exclude, e",
+			Value: "",
+			Usage: "Exclude channel which name contains specified keyword from dump target",
+			EnvVar: "",
+		},
 	}
 	app.Authors = []cli.Author{
 		cli.Author{
@@ -76,6 +82,8 @@ func main() {
 			outputDir = pwd
 		}
 
+		exclude := c.String("exclude")
+
 		// create directory if outputDir does not exists
 		if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 			os.MkdirAll(outputDir, 0755)
@@ -97,7 +105,7 @@ func main() {
 		dumpUsers(api, dir)
 
 		// Dump Channels and Groups
-		dumpRooms(api, dir, rooms)
+		dumpRooms(api, dir, rooms, exclude)
 
 		archive(dir, outputDir)
 	}
@@ -199,14 +207,14 @@ func dumpUsers(api *slack.Client, dir string) {
 	}
 }
 
-func dumpRooms(api *slack.Client, dir string, rooms []string) {
+func dumpRooms(api *slack.Client, dir string, rooms []string, exclude string) {
 	// Dump Channels
 	fmt.Println("dump public channel")
-	channels := dumpChannels(api, dir, rooms)
+	channels := dumpChannels(api, dir, rooms, exclude)
 
 	// Dump Private Groups
 	fmt.Println("dump private channel")
-	groups := dumpGroups(api, dir, rooms)
+	groups := dumpGroups(api, dir, rooms, exclude)
 
 	if len(groups) > 0 {
 		for _, group := range groups {
@@ -236,7 +244,7 @@ func dumpRooms(api *slack.Client, dir string, rooms []string) {
 	check(err)
 }
 
-func dumpChannels(api *slack.Client, dir string, rooms []string) []slack.Channel {
+func dumpChannels(api *slack.Client, dir string, rooms []string, exclude string) []slack.Channel {
 	channels, err := api.GetChannels(false)
 	check(err)
 
@@ -258,13 +266,17 @@ func dumpChannels(api *slack.Client, dir string, rooms []string) []slack.Channel
 
 	for _, channel := range channels {
 		fmt.Println("dump channel " + channel.Name)
+		if len(exclude) != 0 && strings.Contains(channel.Name, exclude) {
+			fmt.Println("dump skipped")
+			continue
+		}
 		dumpChannel(api, dir, channel.ID, channel.Name, "channel")
 	}
 
 	return channels
 }
 
-func dumpGroups(api *slack.Client, dir string, rooms []string) []slack.Group {
+func dumpGroups(api *slack.Client, dir string, rooms []string, exclude string) []slack.Group {
 	groups, err := api.GetGroups(false)
 	check(err)
 	if len(rooms) > 0 {
@@ -285,6 +297,10 @@ func dumpGroups(api *slack.Client, dir string, rooms []string) []slack.Group {
 
 	for _, group := range groups {
 		fmt.Println("dump channel (group) " + group.Name)
+		if len(exclude) != 0 && strings.Contains(group.Name, exclude) {
+			fmt.Println("dump skipped")
+			continue
+		}
 		dumpChannel(api, dir, group.ID, group.Name, "group")
 	}
 
